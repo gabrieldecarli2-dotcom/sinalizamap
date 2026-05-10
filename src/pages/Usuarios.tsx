@@ -1,10 +1,12 @@
 import type { FormEvent } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Edit2, Plus, Search, Trash2, X } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
 import {
-  getUsuariosSistema,
-  saveUsuariosSistema,
+  createUsuarioSistema,
+  deleteUsuarioSistema,
+  listUsuariosSistema,
+  updateUsuarioSistema,
   type UsuarioPerfil,
   type UsuarioSistema,
 } from '../services/usuarios'
@@ -12,7 +14,7 @@ import {
 type UsuarioForm = {
   nome: string
   email: string
-  appwrite_id: string
+  senha: string
   perfil: UsuarioPerfil
   ativo: boolean
 }
@@ -20,7 +22,7 @@ type UsuarioForm = {
 const emptyForm: UsuarioForm = {
   nome: '',
   email: '',
-  appwrite_id: '',
+  senha: '',
   perfil: 'usuario',
   ativo: true,
 }
@@ -29,18 +31,43 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase()
 }
 
-function createUserId(email: string) {
-  return normalizeEmail(email).replace(/[^a-z0-9]+/g, '-') || crypto.randomUUID()
-}
-
 export function Usuarios() {
-  const [usuarios, setUsuarios] = useState(() => getUsuariosSistema())
+  const [usuarios, setUsuarios] = useState<UsuarioSistema[]>([])
   const [form, setForm] = useState<UsuarioForm>(emptyForm)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [perfilFilter, setPerfilFilter] = useState<'todos' | UsuarioPerfil>('todos')
   const [message, setMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    let isMounted = true
+
+    listUsuariosSistema()
+      .then((nextUsuarios) => {
+        if (isMounted) {
+          setUsuarios(nextUsuarios)
+        }
+      })
+      .catch((error) => {
+        if (isMounted) {
+          setErrorMessage(
+            error instanceof Error ? error.message : 'Não foi possível carregar usuários.',
+          )
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const filteredUsuarios = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
@@ -64,7 +91,6 @@ export function Usuarios() {
 
   function persistUsuarios(nextUsuarios: UsuarioSistema[], successMessage: string) {
     setUsuarios(nextUsuarios)
-    saveUsuariosSistema(nextUsuarios)
     setMessage(successMessage)
     setErrorMessage('')
   }
@@ -74,7 +100,7 @@ export function Usuarios() {
     setEditingId(null)
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setMessage('')
     setErrorMessage('')
@@ -95,37 +121,46 @@ export function Usuarios() {
       return
     }
 
-    if (editingId) {
-      const nextUsuarios = usuarios.map((usuario) =>
-        usuario.id === editingId
-          ? {
-              ...usuario,
-              nome: form.nome.trim(),
-              email,
-              appwrite_id: form.appwrite_id.trim(),
-              perfil: form.perfil,
-              ativo: form.ativo,
-            }
-          : usuario,
-      )
-
-      persistUsuarios(nextUsuarios, 'Usuário atualizado.')
-      clearForm()
+    if (!editingId && !form.senha) {
+      setErrorMessage('Informe uma senha inicial para o usuário.')
       return
     }
 
-    const nextUsuario: UsuarioSistema = {
-      id: createUserId(email),
-      nome: form.nome.trim(),
-      email,
-      appwrite_id: form.appwrite_id.trim(),
-      perfil: form.perfil,
-      ativo: form.ativo,
-      criado_em: new Date().toISOString(),
-    }
+    setIsSaving(true)
 
-    persistUsuarios([...usuarios, nextUsuario], 'Usuário incluído.')
-    clearForm()
+    try {
+      if (editingId) {
+        const updated = await updateUsuarioSistema(editingId, {
+          nome: form.nome.trim(),
+          email,
+          ...(form.senha ? { senha: form.senha } : {}),
+          perfil: form.perfil,
+          ativo: form.ativo,
+        })
+        const nextUsuarios = usuarios.map((usuario) =>
+          usuario.id === editingId ? updated : usuario,
+        )
+
+        persistUsuarios(nextUsuarios, 'Usuário atualizado.')
+        clearForm()
+        return
+      }
+
+      const created = await createUsuarioSistema({
+        nome: form.nome.trim(),
+        email,
+        senha: form.senha,
+        perfil: form.perfil,
+        ativo: form.ativo,
+      })
+
+      persistUsuarios([...usuarios, created], 'Usuário incluído.')
+      clearForm()
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Não foi possível salvar.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   function handleEdit(usuario: UsuarioSistema) {
@@ -133,7 +168,7 @@ export function Usuarios() {
     setForm({
       nome: usuario.nome,
       email: usuario.email,
-      appwrite_id: usuario.appwrite_id ?? '',
+      senha: '',
       perfil: usuario.perfil,
       ativo: usuario.ativo,
     })
@@ -141,18 +176,29 @@ export function Usuarios() {
     setErrorMessage('')
   }
 
-  function handleDelete(usuario: UsuarioSistema) {
+  async function handleDelete(usuario: UsuarioSistema) {
     if (!window.confirm(`Excluir ${usuario.nome}?`)) {
       return
     }
 
-    persistUsuarios(
-      usuarios.filter((item) => item.id !== usuario.id),
-      'Usuário excluído.',
-    )
+    setIsSaving(true)
+    setMessage('')
+    setErrorMessage('')
 
-    if (editingId === usuario.id) {
-      clearForm()
+    try {
+      await deleteUsuarioSistema(usuario.id)
+      persistUsuarios(
+        usuarios.filter((item) => item.id !== usuario.id),
+        'Usuário excluído.',
+      )
+
+      if (editingId === usuario.id) {
+        clearForm()
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Não foi possível excluir.')
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -170,7 +216,6 @@ export function Usuarios() {
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
               O perfil admin tem acesso total. O perfil usuário acessa a tela de campo da
               sinalização. O perfil GCM acessa a tela de campo para registrar irregularidades.
-              Para login real, o e-mail também deve existir no Appwrite Authentication.
             </p>
           </div>
         </div>
@@ -194,7 +239,7 @@ export function Usuarios() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 grid gap-3 rounded-lg border border-slate-200 p-4 lg:grid-cols-[1fr_1.2fr_1fr_0.8fr_auto]">
+        <form onSubmit={handleSubmit} className="mt-6 grid gap-3 rounded-lg border border-slate-200 p-4 lg:grid-cols-[1fr_1fr_1fr_0.8fr_auto]">
           <label className="block">
             <span className="text-sm font-medium text-slate-700">Nome</span>
             <input
@@ -206,24 +251,25 @@ export function Usuarios() {
           </label>
 
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">ID Appwrite</span>
-            <input
-              value={form.appwrite_id}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, appwrite_id: event.target.value }))
-              }
-              placeholder="Ex.: 69ff781a..."
-              className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2.5 text-sm outline-none admin-focus focus:ring-4"
-            />
-          </label>
-
-          <label className="block">
             <span className="text-sm font-medium text-slate-700">E-mail</span>
             <input
               type="email"
               value={form.email}
               onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
               placeholder="usuario@email.com"
+              className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2.5 text-sm outline-none admin-focus focus:ring-4"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              {editingId ? 'Nova senha' : 'Senha inicial'}
+            </span>
+            <input
+              type="password"
+              value={form.senha}
+              onChange={(event) => setForm((current) => ({ ...current, senha: event.target.value }))}
+              placeholder={editingId ? 'Deixe em branco para manter' : 'Senha de acesso'}
               className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2.5 text-sm outline-none admin-focus focus:ring-4"
             />
           </label>
@@ -259,10 +305,11 @@ export function Usuarios() {
           <div className="flex gap-2 lg:col-span-5">
             <button
               type="submit"
+              disabled={isSaving}
               className="inline-flex items-center justify-center gap-2 rounded-md admin-bg px-4 py-2.5 text-sm font-semibold text-slate-950 admin-bg-hover"
             >
               <Plus className="h-4 w-4" />
-              {editingId ? 'Salvar edição' : 'Criar usuário'}
+              {isSaving ? 'Salvando...' : editingId ? 'Salvar edição' : 'Criar usuário'}
             </button>
             {editingId && (
               <button
@@ -326,7 +373,13 @@ export function Usuarios() {
 
         <div className="mt-4 overflow-hidden rounded-lg border border-slate-200">
           <div className="divide-y divide-slate-200">
-            {filteredUsuarios.map((usuario) => (
+            {isLoading && (
+              <div className="grid min-h-40 place-items-center p-6 text-center text-sm text-slate-600">
+                Carregando usuários.
+              </div>
+            )}
+
+            {!isLoading && filteredUsuarios.map((usuario) => (
               <div key={usuario.id} className="grid gap-3 p-4 lg:grid-cols-[1fr_1.3fr_0.7fr_0.7fr_auto] lg:items-center">
                 <div>
                   <p className="font-semibold text-slate-950">{usuario.nome}</p>
@@ -376,7 +429,7 @@ export function Usuarios() {
               </div>
             ))}
 
-            {filteredUsuarios.length === 0 && (
+            {!isLoading && filteredUsuarios.length === 0 && (
               <div className="grid min-h-40 place-items-center p-6 text-center text-sm text-slate-600">
                 Nenhum usuário encontrado.
               </div>

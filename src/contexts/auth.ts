@@ -1,13 +1,23 @@
 import { createContext } from 'react'
-import type { Models } from 'appwrite'
 
-export type AuthUser = Pick<Models.User<Models.Preferences>, '$id' | 'email' | 'name'> & {
-  prefs?: Models.Preferences
+export type AuthUser = {
+  $id: string
+  id?: string
+  email: string
+  name: string
+  nome?: string
+  prefs?: {
+    role?: string
+  }
+}
+
+export type AuthSession = {
+  token: string
 }
 
 export interface AuthContextValue {
   user: AuthUser | null
-  session: Models.Session | null
+  session: AuthSession | null
   isLoading: boolean
   isAuthenticated: boolean
   isDevelopmentMode: boolean

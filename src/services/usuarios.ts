@@ -1,18 +1,21 @@
+import { apiRequest } from './api'
+
 export type UsuarioPerfil = 'admin' | 'usuario' | 'gcm'
 
 export interface UsuarioSistema {
   id: string
+  $id?: string
   nome: string
+  name?: string
   email: string
-  appwrite_id?: string
   perfil: UsuarioPerfil
+  prefs?: {
+    role?: string
+  }
   ativo: boolean
   criado_em: string
+  atualizado_em?: string
 }
-
-const storageKey = 'sinalizamap:usuarios'
-const identityStorageKey = 'sinalizamap:appwrite-identidades'
-const updateEventName = 'sinalizamap:usuarios-updated'
 
 export interface UsuarioIdentidade {
   id: string
@@ -20,16 +23,16 @@ export interface UsuarioIdentidade {
   email: string
 }
 
-const initialUsers: UsuarioSistema[] = [
-  {
-    id: 'admin-email',
-    nome: 'Administrador',
-    email: 'admin@email.com',
-    perfil: 'admin',
-    ativo: true,
-    criado_em: new Date().toISOString(),
-  },
-]
+export type UsuarioPayload = {
+  nome: string
+  email: string
+  perfil: UsuarioPerfil
+  ativo: boolean
+  senha?: string
+}
+
+const cacheStorageKey = 'sinalizamap:usuarios-cache'
+const updateEventName = 'sinalizamap:usuarios-updated'
 
 function notifyUsuariosUpdated() {
   window.dispatchEvent(new Event(updateEventName))
@@ -39,29 +42,90 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase()
 }
 
+function normalizeUsuario(usuario: UsuarioSistema): UsuarioSistema {
+  return {
+    ...usuario,
+    id: usuario.id ?? usuario.$id ?? '',
+    nome: usuario.nome ?? usuario.name ?? '',
+    perfil: usuario.perfil ?? (usuario.prefs?.role as UsuarioPerfil) ?? 'usuario',
+  }
+}
+
+function cacheUsuarios(usuarios: UsuarioSistema[]) {
+  window.localStorage.setItem(cacheStorageKey, JSON.stringify(usuarios.map(normalizeUsuario)))
+  notifyUsuariosUpdated()
+}
+
 export function getUsuariosSistema() {
-  const storedValue = window.localStorage.getItem(storageKey)
+  const storedValue = window.localStorage.getItem(cacheStorageKey)
 
   if (!storedValue) {
-    return initialUsers
+    return [] satisfies UsuarioSistema[]
   }
 
   try {
     const parsedValue = JSON.parse(storedValue) as UsuarioSistema[]
 
     if (!Array.isArray(parsedValue)) {
-      return initialUsers
+      return [] satisfies UsuarioSistema[]
     }
 
-    return parsedValue
+    return parsedValue.map(normalizeUsuario)
   } catch {
-    return initialUsers
+    return [] satisfies UsuarioSistema[]
   }
 }
 
 export function saveUsuariosSistema(usuarios: UsuarioSistema[]) {
-  window.localStorage.setItem(storageKey, JSON.stringify(usuarios))
-  notifyUsuariosUpdated()
+  cacheUsuarios(usuarios)
+}
+
+export async function listUsuariosSistema() {
+  const response = await apiRequest<{ rows: UsuarioSistema[]; total: number }>('usuarios')
+  const usuarios = response.rows.map(normalizeUsuario)
+  cacheUsuarios(usuarios)
+
+  return usuarios
+}
+
+export async function createUsuarioSistema(input: UsuarioPayload) {
+  const usuario = normalizeUsuario(
+    await apiRequest<UsuarioSistema>('usuarios', {
+      method: 'POST',
+      body: input,
+    }),
+  )
+
+  await listUsuariosSistema().catch(() => undefined)
+  return usuario
+}
+
+export async function updateUsuarioSistema(id: string, input: Partial<UsuarioPayload>) {
+  const usuario = normalizeUsuario(
+    await apiRequest<UsuarioSistema>(
+      'usuarios',
+      {
+        method: 'PATCH',
+        body: input,
+      },
+      { id },
+    ),
+  )
+
+  await listUsuariosSistema().catch(() => undefined)
+  return usuario
+}
+
+export async function deleteUsuarioSistema(id: string) {
+  await apiRequest<{ ok: boolean }>(
+    'usuarios',
+    {
+      method: 'DELETE',
+    },
+    { id },
+  )
+
+  await listUsuariosSistema().catch(() => undefined)
 }
 
 export function getUsuariosSistemaUpdateEventName() {
@@ -69,38 +133,26 @@ export function getUsuariosSistemaUpdateEventName() {
 }
 
 export function getUsuariosIdentidades() {
-  const storedValue = window.localStorage.getItem(identityStorageKey)
-
-  if (!storedValue) {
-    return [] satisfies UsuarioIdentidade[]
-  }
-
-  try {
-    const parsedValue = JSON.parse(storedValue) as UsuarioIdentidade[]
-
-    if (!Array.isArray(parsedValue)) {
-      return [] satisfies UsuarioIdentidade[]
-    }
-
-    return parsedValue
-  } catch {
-    return [] satisfies UsuarioIdentidade[]
-  }
+  return [] as UsuarioIdentidade[]
 }
 
 export function upsertUsuarioIdentidade(input: UsuarioIdentidade) {
-  const identidades = getUsuariosIdentidades()
-  const nextIdentidades = [
-    ...identidades.filter((item) => item.id !== input.id),
-    {
-      id: input.id,
-      nome: input.nome,
-      email: normalizeEmail(input.email),
-    },
-  ]
+  const usuarios = getUsuariosSistema()
+  const usuarioExists = usuarios.some((usuario) => usuario.id === input.id)
 
-  window.localStorage.setItem(identityStorageKey, JSON.stringify(nextIdentidades))
-  notifyUsuariosUpdated()
+  if (!usuarioExists) {
+    cacheUsuarios([
+      ...usuarios,
+      {
+        id: input.id,
+        nome: input.nome,
+        email: normalizeEmail(input.email),
+        perfil: 'usuario',
+        ativo: true,
+        criado_em: new Date().toISOString(),
+      },
+    ])
+  }
 }
 
 export function resolveUsuarioPerfil(input: {
@@ -112,15 +164,19 @@ export function resolveUsuarioPerfil(input: {
     return 'admin' satisfies UsuarioPerfil
   }
 
+  if (input.prefsRole === 'gcm') {
+    return 'gcm' satisfies UsuarioPerfil
+  }
+
+  if (input.prefsRole === 'usuario') {
+    return 'usuario' satisfies UsuarioPerfil
+  }
+
   const email = normalizeEmail(input.email ?? '')
   const usuario = getUsuariosSistema().find((item) => normalizeEmail(item.email) === email)
 
   if (usuario && usuario.ativo) {
     return usuario.perfil
-  }
-
-  if (usuario && !usuario.ativo) {
-    return 'usuario' satisfies UsuarioPerfil
   }
 
   return 'usuario' satisfies UsuarioPerfil

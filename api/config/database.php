@@ -11,6 +11,7 @@ function sinalizamap_config(): array
         'db_user' => getenv('SINALIZAMAP_DB_USER') ?: 'root',
         'db_pass' => getenv('SINALIZAMAP_DB_PASS') ?: '',
         'db_charset' => getenv('SINALIZAMAP_DB_CHARSET') ?: 'utf8mb4',
+        'app_secret' => getenv('SINALIZAMAP_APP_SECRET') ?: 'troque-esta-chave-no-cpanel',
     ], is_array($localConfig) ? $localConfig : []);
 }
 

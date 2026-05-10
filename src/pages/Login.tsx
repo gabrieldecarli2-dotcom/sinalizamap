@@ -3,7 +3,6 @@ import type { FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Loader2, MapPinned } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
-import { isAppwriteConfigured } from '../services/appwrite'
 
 type LocationState = {
   from?: {
@@ -29,11 +28,6 @@ export function Login() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
-
-    if (!isAppwriteConfigured) {
-      setError('Configure VITE_APPWRITE_PROJECT_ID para autenticar.')
-      return
-    }
 
     setIsSubmitting(true)
     try {
@@ -83,7 +77,7 @@ export function Login() {
           <div>
             <h2 className="text-2xl font-semibold text-slate-950">Entrar</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Acesse com um usuário cadastrado no projeto Appwrite.
+              Acesse com um usuário cadastrado no SinalizaMap.
             </p>
           </div>
 

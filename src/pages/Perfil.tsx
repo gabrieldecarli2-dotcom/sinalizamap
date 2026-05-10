@@ -3,10 +3,10 @@ import { useState } from 'react'
 import { Save } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
 import { useAuth } from '../hooks/useAuth'
-import { account } from '../services/appwrite'
 import {
   getUsuariosSistema,
   saveUsuariosSistema,
+  updateUsuarioSistema,
 } from '../services/usuarios'
 
 export function Perfil() {
@@ -46,7 +46,7 @@ export function Perfil() {
     setErrorMessage('')
 
     if (!user || isDevelopmentMode) {
-      setErrorMessage('Entre com um usuário real do Appwrite para alterar o perfil.')
+      setErrorMessage('Entre com um usuário real para alterar o perfil.')
       return
     }
 
@@ -58,22 +58,15 @@ export function Perfil() {
     setIsSavingProfile(true)
 
     try {
-      if (name.trim() !== user.name) {
-        await account.updateName({ name: name.trim() })
+      if (email.trim().toLowerCase() !== user.email.toLowerCase() && !emailPassword) {
+        setErrorMessage('Informe a senha atual para alterar o e-mail.')
+        return
       }
 
-      if (email.trim().toLowerCase() !== user.email.toLowerCase()) {
-        if (!emailPassword) {
-          setErrorMessage('Informe a senha atual para alterar o e-mail.')
-          return
-        }
-
-        await account.updateEmail({
-          email: email.trim().toLowerCase(),
-          password: emailPassword,
-        })
-      }
-
+      await updateUsuarioSistema(user.$id, {
+        nome: name.trim(),
+        email: email.trim().toLowerCase(),
+      })
       syncLocalUser(name.trim(), email.trim().toLowerCase())
       await refreshUser()
       setEmailPassword('')
@@ -93,7 +86,7 @@ export function Perfil() {
     setErrorMessage('')
 
     if (!user || isDevelopmentMode) {
-      setErrorMessage('Entre com um usuário real do Appwrite para alterar a senha.')
+      setErrorMessage('Entre com um usuário real para alterar a senha.')
       return
     }
 
@@ -105,9 +98,8 @@ export function Perfil() {
     setIsSavingPassword(true)
 
     try {
-      await account.updatePassword({
-        password: newPassword,
-        oldPassword,
+      await updateUsuarioSistema(user.$id, {
+        senha: newPassword,
       })
       setNewPassword('')
       setOldPassword('')

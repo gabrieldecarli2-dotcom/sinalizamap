@@ -103,7 +103,7 @@ export function EditarIrregularidade() {
     }
 
     if (!user || isDevelopmentMode) {
-      setErrorMessage('Para salvar no Appwrite, entre com um usuário real do Appwrite.')
+      setErrorMessage('Para salvar, entre com um usuário real.')
       return
     }
 

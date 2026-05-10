@@ -122,7 +122,7 @@ export function DetalheSinalizacao() {
     }
 
     if (!user || isDevelopmentMode) {
-      setCorrectionError('Para registrar a correção, entre com um usuário real do Appwrite.')
+      setCorrectionError('Para registrar a correção, entre com um usuário real.')
       return
     }
 

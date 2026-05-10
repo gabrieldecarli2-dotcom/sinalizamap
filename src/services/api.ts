@@ -1,4 +1,5 @@
 const defaultApiUrl = `${window.location.origin}/api/index.php`
+const authTokenStorageKey = 'sinalizamap:auth-token'
 
 export const apiBaseUrl = import.meta.env.VITE_API_URL || defaultApiUrl
 
@@ -22,12 +23,18 @@ export async function apiRequest<T>(
   options: RequestOptions = {},
   params?: Record<string, string>,
 ) {
+  const headers = new Headers(options.headers)
+  headers.set('Content-Type', 'application/json')
+
+  const token = getAuthToken()
+
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+
   const response = await fetch(buildUrl(path, params), {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   })
 
@@ -38,4 +45,16 @@ export async function apiRequest<T>(
   }
 
   return data as T
+}
+
+export function getAuthToken() {
+  return window.localStorage.getItem(authTokenStorageKey)
+}
+
+export function setAuthToken(token: string) {
+  window.localStorage.setItem(authTokenStorageKey, token)
+}
+
+export function clearAuthToken() {
+  window.localStorage.removeItem(authTokenStorageKey)
 }

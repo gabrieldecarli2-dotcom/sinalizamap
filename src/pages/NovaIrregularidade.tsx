@@ -205,7 +205,7 @@ export function NovaIrregularidade() {
     }
 
     if (!user || isDevelopmentMode) {
-      setErrorMessage('Para salvar no Appwrite, entre com um usuário real do Appwrite.')
+      setErrorMessage('Para salvar, entre com um usuário real.')
       return
     }
 
@@ -242,7 +242,7 @@ export function NovaIrregularidade() {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : 'Não foi possível salvar a irregularidade no Appwrite.',
+          : 'Não foi possível salvar a irregularidade.',
       )
     } finally {
       setIsSaving(false)

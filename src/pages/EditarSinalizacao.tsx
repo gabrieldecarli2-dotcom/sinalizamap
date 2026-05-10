@@ -143,7 +143,7 @@ export function EditarSinalizacao() {
     }
 
     if (!user || isDevelopmentMode) {
-      setErrorMessage('Para editar, entre com um usuário real do Appwrite.')
+      setErrorMessage('Para editar, entre com um usuário real.')
       return
     }
 
@@ -192,7 +192,7 @@ export function EditarSinalizacao() {
     setErrorMessage('')
 
     if (!id || !user || isDevelopmentMode) {
-      setErrorMessage('Para excluir, entre com um usuário real do Appwrite.')
+      setErrorMessage('Para excluir, entre com um usuário real.')
       return
     }
 

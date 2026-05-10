@@ -199,7 +199,7 @@ export function NovaSinalizacao() {
     }
 
     if (!user || isDevelopmentMode) {
-      setErrorMessage('Para salvar no Appwrite, entre com um usuário real do Appwrite.')
+      setErrorMessage('Para salvar, entre com um usuário real.')
       return
     }
 
@@ -251,7 +251,7 @@ export function NovaSinalizacao() {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : 'Não foi possível salvar a sinalização no Appwrite.',
+          : 'Não foi possível salvar a sinalização.',
       )
     } finally {
       setIsSaving(false)

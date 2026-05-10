@@ -2,7 +2,7 @@ import type { FormEvent } from 'react'
 import { useMemo, useState } from 'react'
 import { Edit2, Plus, RotateCcw, Search, Trash2, X } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
-import { appwriteConfig, isAppwriteConfigured } from '../services/appwrite'
+import { apiBaseUrl } from '../services/api'
 import {
   getTiposSinalizacao,
   resetTiposSinalizacao,
@@ -167,22 +167,17 @@ export function Configuracoes() {
     <div className="space-y-6">
       <PageHeader
         title="Configurações"
-        description="Preferências do sistema, integrações e catálogo de sinalizações."
+        description="Preferências do sistema, integração SQL e catálogo de sinalizações."
       />
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">Integração Appwrite</h2>
+        <h2 className="text-lg font-semibold text-slate-950">Integração SQL</h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          Status das variáveis de ambiente necessárias para autenticação e acesso aos dados.
+          Endpoint usado pelo frontend para autenticação e acesso aos dados.
         </p>
         <div className="mt-5 space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-          <p className="font-medium">
-            {isAppwriteConfigured
-              ? 'Appwrite configurado para este ambiente.'
-              : 'Configure VITE_APPWRITE_PROJECT_ID.'}
-          </p>
-          <p>Endpoint: {appwriteConfig.endpoint}</p>
-          <p>Database ID: {appwriteConfig.databaseId || 'não configurado'}</p>
+          <p className="font-medium">API SQL configurada para este ambiente.</p>
+          <p>Endpoint: {apiBaseUrl}</p>
         </div>
       </section>
 

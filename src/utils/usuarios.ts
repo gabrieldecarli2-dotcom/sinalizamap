@@ -12,7 +12,7 @@ export function resolveUsuarioLabel(userId?: string, currentUser?: AuthUser | nu
 
   const usuarios = getUsuariosSistema()
   const usuario = usuarios.find(
-    (item) => item.id === userId || item.appwrite_id === userId || item.email === userId,
+    (item) => item.id === userId || item.email === userId,
   )
 
   if (usuario) {

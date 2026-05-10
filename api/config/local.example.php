@@ -6,4 +6,5 @@ return [
     'db_user' => 'usuario_do_banco',
     'db_pass' => 'senha_do_banco',
     'db_charset' => 'utf8mb4',
+    'app_secret' => 'gere-uma-chave-grande-e-aleatoria',
 ];

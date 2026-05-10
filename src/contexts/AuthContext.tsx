@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Models } from 'appwrite'
-import { account, isAppwriteConfigured } from '../services/appwrite'
-import { upsertUsuarioIdentidade } from '../services/usuarios'
+import { getCurrentUser, getStoredAuthToken, login, logout } from '../services/auth'
+import { listUsuariosSistema, upsertUsuarioIdentidade } from '../services/usuarios'
 import { AuthContext } from './auth'
-import type { AuthContextValue, AuthUser } from './auth'
+import type { AuthContextValue, AuthSession, AuthUser } from './auth'
 
 const devAuthStorageKey = 'sinalizamap:dev-auth'
 const devUser: AuthUser = {
@@ -16,22 +15,25 @@ const devUser: AuthUser = {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Models.Session | null>(null)
+  const [session, setSession] = useState<AuthSession | null>(() => {
+    const token = getStoredAuthToken()
+    return token ? { token } : null
+  })
   const [user, setUser] = useState<AuthUser | null>(null)
   const [devAuthenticated, setDevAuthenticated] = useState(
     () => import.meta.env.DEV && localStorage.getItem(devAuthStorageKey) === 'true',
   )
-  const [isLoading, setIsLoading] = useState(isAppwriteConfigured)
+  const [isLoading, setIsLoading] = useState(Boolean(getStoredAuthToken()))
 
   useEffect(() => {
-    if (!isAppwriteConfigured) {
+    if (!getStoredAuthToken() || devAuthenticated) {
+      setIsLoading(false)
       return undefined
     }
 
     let isMounted = true
 
-    account
-      .get()
+    getCurrentUser()
       .then((currentUser) => {
         if (isMounted) {
           upsertUsuarioIdentidade({
@@ -39,11 +41,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             nome: currentUser.name,
             email: currentUser.email,
           })
+          listUsuariosSistema().catch(() => undefined)
           setUser(currentUser)
         }
       })
       .catch(() => {
         if (isMounted) {
+          logout()
           setUser(null)
           setSession(null)
         }
@@ -57,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [devAuthenticated])
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -67,22 +71,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: Boolean(user || devAuthenticated),
       isDevelopmentMode: devAuthenticated,
       signIn: async (email: string, password: string) => {
-        if (!isAppwriteConfigured) {
-          throw new Error('Configure VITE_APPWRITE_PROJECT_ID para autenticar.')
-        }
-
-        const nextSession = await account.createEmailPasswordSession({
-          email,
-          password,
-        })
-        const nextUser = await account.get()
+        const response = await login(email, password)
         upsertUsuarioIdentidade({
-          id: nextUser.$id,
-          nome: nextUser.name,
-          email: nextUser.email,
+          id: response.user.$id,
+          nome: response.user.name,
+          email: response.user.email,
         })
-        setSession(nextSession)
-        setUser(nextUser)
+        listUsuariosSistema().catch(() => undefined)
+        setSession({ token: response.token })
+        setUser(response.user)
         localStorage.removeItem(devAuthStorageKey)
         setDevAuthenticated(false)
       },
@@ -95,20 +92,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setDevAuthenticated(true)
       },
       signOut: async () => {
-        if (isAppwriteConfigured && user) {
-          await account.deleteSession({ sessionId: 'current' }).catch(() => undefined)
-        }
+        logout()
         localStorage.removeItem(devAuthStorageKey)
         setDevAuthenticated(false)
         setSession(null)
         setUser(null)
       },
       refreshUser: async () => {
-        if (!isAppwriteConfigured || devAuthenticated) {
+        if (devAuthenticated) {
           return
         }
 
-        const nextUser = await account.get()
+        const nextUser = await getCurrentUser()
         upsertUsuarioIdentidade({
           id: nextUser.$id,
           nome: nextUser.name,
