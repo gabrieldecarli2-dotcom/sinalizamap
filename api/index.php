@@ -15,6 +15,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 try {
     $resource = $_GET['resource'] ?? '';
 
+    if ($resource === 'health') {
+        json_response([
+            'ok' => true,
+            'php_version' => PHP_VERSION,
+        ]);
+    }
+
     if ($resource === 'auth') {
         handle_auth();
     }
