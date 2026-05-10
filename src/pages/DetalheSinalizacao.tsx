@@ -16,7 +16,7 @@ import type {
 import { getCondicaoLabel } from '../utils/condicao'
 import { resolveUsuarioLabel } from '../utils/usuarios'
 
-function formatDateTime(value?: string) {
+function formatDateTime(value?: string | null) {
   if (!value) {
     return 'Data não informada'
   }
@@ -27,7 +27,7 @@ function formatDateTime(value?: string) {
   }).format(new Date(value))
 }
 
-function formatDate(value?: string) {
+function formatDate(value?: string | null) {
   if (!value) {
     return 'Data não informada'
   }
