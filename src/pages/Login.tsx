@@ -15,7 +15,7 @@ export function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { isAuthenticated, signIn, signInDevelopment } = useAuth()
+  const { isAuthenticated, signIn } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const state = location.state as LocationState | null
@@ -38,11 +38,6 @@ export function Login() {
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  function handleDevelopmentLogin() {
-    signInDevelopment()
-    navigate(redirectTo, { replace: true })
   }
 
   return (
@@ -121,16 +116,6 @@ export function Login() {
             {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
             Acessar sistema
           </button>
-
-          {import.meta.env.DEV && (
-            <button
-              type="button"
-              onClick={handleDevelopmentLogin}
-              className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Entrar em modo desenvolvimento
-            </button>
-          )}
         </form>
       </section>
     </main>
