@@ -169,8 +169,9 @@ export function CampoMapa() {
             <button
               type="button"
               onClick={() => {
-                setFollowLocation(true)
                 requestLocation()
+                setFollowLocation(false)
+                window.setTimeout(() => setFollowLocation(true), 0)
               }}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
               aria-label="Atualizar localização"

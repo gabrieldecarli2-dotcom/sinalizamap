@@ -104,6 +104,7 @@ export function OpenLayersCampoMap({
   const mapElementRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<Map | null>(null)
   const sourceRef = useRef(new VectorSource())
+  const didFollowLocationRef = useRef(false)
   const [selectedSinalizacao, setSelectedSinalizacao] =
     useState<SinalizacaoDocument | null>(null)
 
@@ -206,9 +207,17 @@ export function OpenLayersCampoMap({
     const map = mapRef.current
 
     if (!map || !center || !followLocation) {
+      if (!followLocation) {
+        didFollowLocationRef.current = false
+      }
       return
     }
 
+    if (didFollowLocationRef.current) {
+      return
+    }
+
+    didFollowLocationRef.current = true
     map.getView().animate({
       center: fromLonLat([center[1], center[0]]),
       zoom: Math.max(map.getView().getZoom() ?? 18, 18),
