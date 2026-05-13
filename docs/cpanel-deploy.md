@@ -20,6 +20,17 @@
 https://seudominio.com.br/api/index.php?resource=health
 ```
 
+Para ativar alertas no Telegram quando a GCM registrar irregularidades, adicione também:
+
+```php
+'app_url' => 'https://sinalizamap.transitoleme.sp.gov.br',
+'telegram_alertas_ativos' => true,
+'telegram_bot_token' => 'TOKEN_DO_BOT',
+'telegram_chat_id' => 'CHAT_ID_DO_GRUPO',
+```
+
+Se não quiser alertas, mantenha `telegram_alertas_ativos` como `false`.
+
 ## Frontend
 
 Antes do build, configure:

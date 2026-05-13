@@ -2,6 +2,7 @@
 
 require __DIR__ . '/config/database.php';
 require __DIR__ . '/lib/http.php';
+require __DIR__ . '/lib/telegram.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
@@ -498,6 +499,11 @@ function create_sinalizacao(): void
     ]);
 
     $pdo->commit();
+
+    if (($created['categoria'] ?? '') === 'irregularidade') {
+        notify_telegram_irregularidade($created);
+    }
+
     json_response($created, 201);
 }
 

@@ -13,6 +13,10 @@ function sinalizamap_config(): array
         'db_charset' => getenv('SINALIZAMAP_DB_CHARSET') ?: 'utf8mb4',
         'db_socket' => getenv('SINALIZAMAP_DB_SOCKET') ?: '',
         'app_secret' => getenv('SINALIZAMAP_APP_SECRET') ?: 'troque-esta-chave-no-cpanel',
+        'app_url' => getenv('SINALIZAMAP_APP_URL') ?: '',
+        'telegram_alertas_ativos' => getenv('SINALIZAMAP_TELEGRAM_ALERTAS_ATIVOS') ?: false,
+        'telegram_bot_token' => getenv('SINALIZAMAP_TELEGRAM_BOT_TOKEN') ?: '',
+        'telegram_chat_id' => getenv('SINALIZAMAP_TELEGRAM_CHAT_ID') ?: '',
     ], is_array($localConfig) ? $localConfig : []);
 }
 
