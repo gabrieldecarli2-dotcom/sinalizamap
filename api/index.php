@@ -207,8 +207,8 @@ function map_usuario(array $row): array
 {
     return [
         '$id' => $row['id'],
-        '$createdAt' => date(DATE_ATOM, strtotime($row['criado_em'])),
-        '$updatedAt' => date(DATE_ATOM, strtotime($row['atualizado_em'])),
+        '$createdAt' => sinalizamap_datetime($row['criado_em']),
+        '$updatedAt' => sinalizamap_datetime($row['atualizado_em']),
         'id' => $row['id'],
         'nome' => $row['nome'],
         'name' => $row['nome'],
@@ -216,8 +216,8 @@ function map_usuario(array $row): array
         'perfil' => $row['perfil'],
         'prefs' => ['role' => $row['perfil']],
         'ativo' => (bool) $row['ativo'],
-        'criado_em' => date(DATE_ATOM, strtotime($row['criado_em'])),
-        'atualizado_em' => date(DATE_ATOM, strtotime($row['atualizado_em'])),
+        'criado_em' => sinalizamap_datetime($row['criado_em']),
+        'atualizado_em' => sinalizamap_datetime($row['atualizado_em']),
     ];
 }
 
@@ -232,6 +232,28 @@ function find_usuario_by_id_or_fail(PDO $pdo, string $id): array
     }
 
     return $row;
+}
+
+function resolve_usuario_label(PDO $pdo, ?string $userId): string
+{
+    $cleanUserId = trim((string) $userId);
+
+    if ($cleanUserId === '') {
+        return '';
+    }
+
+    $statement = $pdo->prepare('SELECT nome, email FROM usuarios WHERE id = :id OR email = :email LIMIT 1');
+    $statement->execute([
+        'id' => $cleanUserId,
+        'email' => $cleanUserId,
+    ]);
+    $usuario = $statement->fetch();
+
+    if (!$usuario) {
+        return $cleanUserId;
+    }
+
+    return trim($usuario['nome'] . ' (' . $usuario['email'] . ')');
 }
 
 function login_usuario(): void
@@ -351,8 +373,8 @@ function map_sinalizacao(array $row): array
 {
     return [
         '$id' => $row['id'],
-        '$createdAt' => date(DATE_ATOM, strtotime($row['criado_em'])),
-        '$updatedAt' => date(DATE_ATOM, strtotime($row['atualizado_em'])),
+        '$createdAt' => sinalizamap_datetime($row['criado_em']),
+        '$updatedAt' => sinalizamap_datetime($row['atualizado_em']),
         'tipo_id' => $row['tipo_id'],
         'tipo_nome' => $row['tipo_nome'],
         'categoria' => $row['categoria'],
@@ -375,8 +397,8 @@ function map_historico(array $row): array
 {
     return [
         '$id' => $row['id'],
-        '$createdAt' => date(DATE_ATOM, strtotime($row['criado_em'])),
-        '$updatedAt' => date(DATE_ATOM, strtotime($row['atualizado_em'])),
+        '$createdAt' => sinalizamap_datetime($row['criado_em']),
+        '$updatedAt' => sinalizamap_datetime($row['atualizado_em']),
         'sinalizacao_id' => $row['sinalizacao_id'],
         'acao' => $row['acao'],
         'motivo' => $row['motivo'],
@@ -501,7 +523,7 @@ function create_sinalizacao(): void
     $pdo->commit();
 
     if (($created['categoria'] ?? '') === 'irregularidade') {
-        notify_telegram_irregularidade($created);
+        notify_telegram_irregularidade($created, resolve_usuario_label($pdo, $created['criado_por'] ?? ''));
     }
 
     json_response($created, 201);

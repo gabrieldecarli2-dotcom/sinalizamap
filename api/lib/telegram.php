@@ -57,7 +57,7 @@ function telegram_post(string $token, array $payload): bool
     return file_get_contents($url, false, $context) !== false;
 }
 
-function notify_telegram_irregularidade(array $sinalizacao): void
+function notify_telegram_irregularidade(array $sinalizacao, string $criadoPorLabel = ''): void
 {
     $config = sinalizamap_config();
 
@@ -72,7 +72,7 @@ function notify_telegram_irregularidade(array $sinalizacao): void
         telegram_line('Endereço', $sinalizacao['endereco'] ?? ''),
         telegram_line('Observação', $sinalizacao['observacoes'] ?? ''),
         telegram_line('Patrimônio', $sinalizacao['patrimonio'] ?? ''),
-        telegram_line('Registrado por', $sinalizacao['criado_por'] ?? ''),
+        telegram_line('Registrado por', $criadoPorLabel ?: ($sinalizacao['criado_por'] ?? '')),
         telegram_line('Protocolo', $sinalizacao['$id'] ?? ''),
         telegram_line(
             'Coordenadas',

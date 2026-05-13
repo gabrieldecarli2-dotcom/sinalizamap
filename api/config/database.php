@@ -2,6 +2,8 @@
 
 function sinalizamap_config(): array
 {
+    date_default_timezone_set('America/Sao_Paulo');
+
     $localConfigPath = __DIR__ . '/local.php';
     $localConfig = file_exists($localConfigPath) ? require $localConfigPath : [];
 
@@ -14,10 +16,24 @@ function sinalizamap_config(): array
         'db_socket' => getenv('SINALIZAMAP_DB_SOCKET') ?: '',
         'app_secret' => getenv('SINALIZAMAP_APP_SECRET') ?: 'troque-esta-chave-no-cpanel',
         'app_url' => getenv('SINALIZAMAP_APP_URL') ?: '',
+        'timezone' => getenv('SINALIZAMAP_TIMEZONE') ?: 'America/Sao_Paulo',
         'telegram_alertas_ativos' => getenv('SINALIZAMAP_TELEGRAM_ALERTAS_ATIVOS') ?: false,
         'telegram_bot_token' => getenv('SINALIZAMAP_TELEGRAM_BOT_TOKEN') ?: '',
         'telegram_chat_id' => getenv('SINALIZAMAP_TELEGRAM_CHAT_ID') ?: '',
     ], is_array($localConfig) ? $localConfig : []);
+}
+
+function sinalizamap_datetime(?string $value): ?string
+{
+    if (!$value) {
+        return null;
+    }
+
+    $config = sinalizamap_config();
+    $timezone = new DateTimeZone($config['timezone'] ?: 'America/Sao_Paulo');
+    $date = new DateTime($value, $timezone);
+
+    return $date->format(DATE_ATOM);
 }
 
 function sinalizamap_pdo(): PDO
@@ -48,6 +64,7 @@ function sinalizamap_pdo(): PDO
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
+    $pdo->exec("SET time_zone = '-03:00'");
 
     return $pdo;
 }

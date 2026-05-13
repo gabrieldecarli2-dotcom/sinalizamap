@@ -16,7 +16,6 @@ import { StatCard } from '../components/StatCard'
 import { listSinalizacoes } from '../services/sinalizacoes'
 import type { SinalizacaoDocument } from '../services/sinalizacoes'
 import type { SinalizacaoCategoriaFilter } from '../types/mapFilters'
-import { isCondicaoPendente } from '../utils/condicao'
 
 export function Dashboard() {
   const [sinalizacoes, setSinalizacoes] = useState<SinalizacaoDocument[]>([])
@@ -51,8 +50,9 @@ export function Dashboard() {
     }
   }, [])
 
-  const pendentes = sinalizacoes.filter((sinalizacao) =>
-    isCondicaoPendente(sinalizacao.condicao),
+  const ausentes = sinalizacoes.filter((sinalizacao) =>
+    sinalizacao.categoria !== 'irregularidade' &&
+    (sinalizacao.condicao === '0' || sinalizacao.condicao === 'ausente'),
   ).length
   const irregularidadesPendentes = sinalizacoes.filter(
     (sinalizacao) =>
@@ -109,8 +109,9 @@ export function Dashboard() {
         <Link to="/sinalizacoes?condicao=0" className="block">
           <StatCard
             label="Pendências"
-            value={isLoading ? '...' : String(pendentes)}
+            value={isLoading ? '...' : String(ausentes)}
             hint="Sinalização ausente"
+            tone={!isLoading && ausentes > 0 ? 'danger' : 'default'}
           />
         </Link>
         <StatCard label="Equipes" value="-" hint="Usuários de campo ativos" />
@@ -119,6 +120,7 @@ export function Dashboard() {
             label="Irregularidades"
             value={isLoading ? '...' : String(irregularidadesPendentes)}
             hint="Pendentes da GCM"
+            tone={!isLoading && irregularidadesPendentes > 0 ? 'info' : 'default'}
           />
         </Link>
       </div>
