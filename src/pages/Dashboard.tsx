@@ -16,6 +16,7 @@ import { StatCard } from '../components/StatCard'
 import { listSinalizacoes } from '../services/sinalizacoes'
 import type { SinalizacaoDocument } from '../services/sinalizacoes'
 import type { SinalizacaoCategoriaFilter } from '../types/mapFilters'
+import { isCondicaoPendente } from '../utils/condicao'
 
 export function Dashboard() {
   const [sinalizacoes, setSinalizacoes] = useState<SinalizacaoDocument[]>([])
@@ -52,7 +53,9 @@ export function Dashboard() {
 
   const ausentes = sinalizacoes.filter((sinalizacao) =>
     sinalizacao.categoria !== 'irregularidade' &&
-    (sinalizacao.condicao === '0' || sinalizacao.condicao === 'ausente'),
+    (sinalizacao.condicao === '0' ||
+      sinalizacao.condicao === 'ausente' ||
+      isCondicaoPendente(sinalizacao.condicao)),
   ).length
   const irregularidadesPendentes = sinalizacoes.filter(
     (sinalizacao) =>
